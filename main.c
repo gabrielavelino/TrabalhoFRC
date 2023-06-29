@@ -89,8 +89,15 @@ void joinRoom(int clientIndex, int roomIndex)
 
 void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientIndex)
 {
-   printf("Entrou na sala criada %s\n", buffer);
+   printf("Entrou na sala criada %s, clientFileDescriptor %d, clientIndex %d\n", buffer, client_file_decriptor, clientIndex);
    int roomIndex = atoi(buffer + 6);
+   for(int aux = 0; aux < MAX_ROOMS; aux++){
+      if(strcmp(rooms[aux].name, buffer + 6) == 0){
+         roomIndex = aux;
+         break;
+      }
+   }
+   printf("roomIndex %d\n", roomIndex);
    if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
    {
       joinRoom(clientIndex, roomIndex);
@@ -128,9 +135,14 @@ void listRooms(int client_file_descriptor)
 {
    for (size_t i = 0; i < MAX_ROOMS; i++)
    {
+      size_t nameLength = strlen(rooms[i].name) - 1;
       printf("%s\n", rooms[i].name);
+      char roomName[50];
+      strcpy(roomName, rooms[i].name);
+      roomName[nameLength - 1] = 0;
+
       char roomList[256];
-      sprintf(roomList, "%s %d/10\n", rooms[i].name, rooms[i].numClients);
+      sprintf(roomList, "%s - %d/%d\n", roomName, rooms[i].numClients, MAX_CLIENTS_PER_ROOM);
       if(strcmp(rooms[i].name, "") == 0){
          break;
       }
