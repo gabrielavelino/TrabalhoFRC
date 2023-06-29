@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -66,6 +67,14 @@ void leaveRoom(int clientIndex)
 
    rooms[roomIndex].numClients--;
    clients[clientIndex].roomIndex = -1;
+}
+
+void listRooms(int file_descriptor) {
+   for (size_t i = 0; i < MAX_ROOMS; i++)
+   {
+      printf("%s\n", rooms->name);
+      send(file_descriptor, rooms->name, strlen(rooms->name), 0);
+   }
 }
 
 void broadcastMessage(int senderIndex, char *message)
@@ -244,6 +253,9 @@ int main(int argc, char *argv[])
                         {
                            send(i, "Sala inválida\n", 16, 0);
                         }
+                     }
+                     else if (strncmp(buffer, "/list", 5) == 0) {
+                        listRooms(i);
                      }
                      else
                      {
