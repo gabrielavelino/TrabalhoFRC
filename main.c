@@ -29,7 +29,6 @@ fd_set master, read_fds;
 int fdmax, listener;
 ChatRoom rooms[MAX_ROOMS];
 Client clients[MAX_CLIENTS_PER_ROOM];
-char roomName[50];
 
 void initializeRooms()
 {
@@ -41,6 +40,7 @@ void initializeRooms()
 }
 void createNewRoomCommand(char buffer[256], int client_file_decriptor)
 {
+   char roomName[50];
    strncpy(roomName, buffer + 8, sizeof(roomName) - 1);
    roomName[sizeof(roomName) - 1] = '\0';
 
@@ -94,7 +94,7 @@ void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientInde
    if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
    {
       joinRoom(clientIndex, roomIndex);
-      printf("Cliente %d entrou na sala %s\n", client_file_decriptor, roomName);
+      //printf("Cliente %d entrou na sala %s\n", client_file_decriptor, roomName);
    }
    else
    {
@@ -124,12 +124,17 @@ void leaveRoom(int clientIndex)
    clients[clientIndex].roomIndex = -1;
 }
 
-void listRooms(int file_descriptor)
+void listRooms(int client_file_descriptor)
 {
    for (size_t i = 0; i < MAX_ROOMS; i++)
    {
-      printf("%s\n", rooms->name);
-      send(file_descriptor, rooms->name, strlen(rooms->name), 0);
+      printf("%s\n", rooms[i].name);
+      char roomList[256];
+      sprintf(roomList, "%s %d/10\n", rooms[i].name, rooms[i].numClients);
+      if(strcmp(rooms[i].name, "") == 0){
+         break;
+      }
+      send(client_file_descriptor, roomList, strlen(roomList), 0);
    }
 }
 
@@ -141,6 +146,10 @@ void broadcastMessage(int senderIndex, char *message)
 
    for (int i = 0; i < numClients; i++)
    {
+      if(strncmp(message, "/exit", 5) == 0){
+         leaveRoom(senderIndex);
+         break;
+      }
       int clientSocket = clients[clientsInRoom[i]].socket;
       send(clientSocket, message, strlen(message), 0);
    }
