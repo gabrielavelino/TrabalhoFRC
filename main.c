@@ -10,7 +10,8 @@
 #include <unistd.h>
 
 #define MAX_ROOMS 10
-#define MAX_CLIENTS_PER_ROOM 10
+#define MAX_CLIENTS 4
+#define MAX_CLIENTS_PER_ROOM 2
 
 typedef struct
 {
@@ -28,7 +29,7 @@ typedef struct
 fd_set master, read_fds;
 int fdmax, listener;
 ChatRoom rooms[MAX_ROOMS];
-Client clients[MAX_CLIENTS_PER_ROOM];
+Client clients[MAX_CLIENTS];
 
 void initializeRooms()
 {
@@ -98,6 +99,11 @@ void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientInde
       }
    }
    printf("roomIndex %d\n", roomIndex);
+   if (rooms[roomIndex].numClients == MAX_CLIENTS_PER_ROOM)
+   {
+      send(client_file_decriptor, "Sala cheia\n", 11, 0);
+      return;
+   }
    if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
    {
       joinRoom(clientIndex, roomIndex);
@@ -185,7 +191,7 @@ void acceptNewClient()
    }
 
    int clientIndex = -1;
-   for (int j = 0; j < MAX_CLIENTS_PER_ROOM; j++)
+   for (int j = 0; j < MAX_CLIENTS; j++)
    {
       if (clients[j].socket == 0)
       {
@@ -196,7 +202,7 @@ void acceptNewClient()
       }
    }
 
-   printf("Novo cliente conectado (socket %d)\n", newFileDescriptor);
+   printf("Novo cliente conectado (socket %d) \n", clientIndex);
 }
 
 int main(int argc, char *argv[])
@@ -239,8 +245,10 @@ int main(int argc, char *argv[])
       {
          if (FD_ISSET(i, &read_fds))
          {
-            if (i == listener)
+            if (i == listener){
                acceptNewClient();
+
+            }
             else
             {
                char buffer[256];
@@ -249,7 +257,7 @@ int main(int argc, char *argv[])
                if (nbytes <= 0)
                {
                   int clientIndex = -1;
-                  for (int j = 0; j < MAX_CLIENTS_PER_ROOM; j++)
+                  for (int j = 0; j < MAX_CLIENTS; j++)
                   {
                      if (clients[j].socket == i)
                      {
@@ -273,7 +281,7 @@ int main(int argc, char *argv[])
                   buffer[nbytes] = '\0';
 
                   int clientIndex = -1;
-                  for (int j = 0; j < MAX_CLIENTS_PER_ROOM; j++)
+                  for (int j = 0; j < MAX_CLIENTS; j++)
                   {
                      if (clients[j].socket == i)
                      {
