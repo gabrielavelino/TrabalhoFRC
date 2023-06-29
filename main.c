@@ -42,7 +42,7 @@ void initializeRooms()
 }
 void setNameCommand(char buffer[256], int client_file_decriptor, int clientIndex){
    char name[50];
-   strncpy(name, buffer + 5, sizeof(name) - 1);
+   strncpy(name, buffer + 6, sizeof(name) - 1);
    name[sizeof(name) - 1] = '\0';
    strcpy(clients[clientIndex].name, name);
    printf("Nome do cliente %d: %s\n", clientIndex, clients[clientIndex].name);
@@ -98,7 +98,7 @@ void joinRoom(int clientIndex, int roomIndex)
 
 void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientIndex)
 {
-   printf("Entrou na sala criada %s, clientFileDescriptor %d, clientIndex %d\n", buffer, client_file_decriptor, clientIndex);
+   printf("Entrou na sala criada %s\n", buffer);
    int roomIndex = atoi(buffer + 6);
    for(int aux = 0; aux < MAX_ROOMS; aux++){
       if(strcmp(rooms[aux].name, buffer + 6) == 0){
@@ -116,7 +116,6 @@ void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientInde
    {
       joinRoom(clientIndex, roomIndex);
       send(client_file_decriptor, "Voce entrou na sala.\n", 22, 0);
-      //printf("Cliente %d entrou na sala %s\n", client_file_decriptor, roomName);
    }
    else
    {
@@ -150,11 +149,11 @@ void listRooms(int client_file_descriptor)
 {
    for (size_t i = 0; i < MAX_ROOMS; i++)
    {
-      size_t nameLength = strlen(rooms[i].name) - 1;
+      size_t nameLength = strlen(rooms[i].name);
       printf("%s\n", rooms[i].name);
       char roomName[50];
       strcpy(roomName, rooms[i].name);
-      roomName[nameLength - 1] = 0;
+      roomName[nameLength - 2] = 0; // menos 2 caracteres no final
 
       char roomList[256];
       sprintf(roomList, "%s - %d/%d\n", roomName, rooms[i].numClients, MAX_CLIENTS_PER_ROOM);
@@ -175,9 +174,9 @@ void broadcastMessage(int senderIndex, char *message)
    size_t nameLength = strlen(clients[senderIndex].name);
    char clientName[50];
    strcpy(clientName, clients[senderIndex].name);
-   clientName[nameLength - 1] = 0;
+   clientName[nameLength - 2] = 0;
 
-   sprintf(senderName, "%s: %s", clients[senderIndex].name, message);
+   sprintf(senderName, "%s: %s", clientName, message);
 
    for (int i = 0; i < numClients; i++)
    {
