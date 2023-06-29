@@ -39,12 +39,67 @@ void initializeRooms()
       rooms[i].numClients = 0;
    }
 }
+void createNewRoomCommand(char buffer[256], int client_file_decriptor)
+{
+   strncpy(roomName, buffer + 8, sizeof(roomName) - 1);
+   roomName[sizeof(roomName) - 1] = '\0';
+
+   int roomIndex = -1;
+   for (int i = 0; i < MAX_ROOMS; i++)
+   {
+      if (strlen(rooms[i].name) == 0)
+      {
+         roomIndex = i;
+         strcpy(rooms[i].name, roomName);
+         rooms[i].numClients = 0;
+         break;
+      }
+   }
+   if (roomIndex != -1)
+   {
+      // joinRoom(clientIndex, roomIndex);
+      printf("Cliente %d criou a sala %s\n", client_file_decriptor, roomName);
+   }
+   else
+   {
+      send(client_file_decriptor, "Não é possível criar a sala. Limite máximo de salas atingido.\n", 61, 0);
+   }
+}
+
+
+void showHelpMessageCommand(int client_file_decriptor)
+{
+   char helpMessage[] = "\n########### COMANDOS DE AJUDA ############\n"
+                        "Comandos disponíveis:\n"
+                        "/help - Exibe a lista de comandos disponíveis\n"
+                        "/join <sala> - Entra na sala especificada\n"
+                        "/create <nome> - Cria uma nova sala com o nome especificado\n"
+                        "/list - Lista as salas disponíveis\n"
+                        "/exit - Sai do chat\n"
+                        "##########################################\n\n";
+   send(client_file_decriptor, helpMessage, sizeof(helpMessage), 0);
+}
 
 void joinRoom(int clientIndex, int roomIndex)
 {
    clients[clientIndex].roomIndex = roomIndex;
    rooms[roomIndex].clients[rooms[roomIndex].numClients] = clientIndex;
    rooms[roomIndex].numClients++;
+}
+
+void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientIndex)
+{
+   printf("Entrou na sala criada %s\n", buffer);
+   int roomIndex = atoi(buffer + 6);
+   if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
+   {
+      joinRoom(clientIndex, roomIndex);
+      printf("Cliente %d entrou na sala %s\n", client_file_decriptor, roomName);
+   }
+   else
+   {
+      send(client_file_decriptor, "Sala inválida\n", 16, 0);
+   }
 }
 
 void leaveRoom(int clientIndex)
@@ -69,7 +124,8 @@ void leaveRoom(int clientIndex)
    clients[clientIndex].roomIndex = -1;
 }
 
-void listRooms(int file_descriptor) {
+void listRooms(int file_descriptor)
+{
    for (size_t i = 0; i < MAX_ROOMS; i++)
    {
       printf("%s\n", rooms->name);
@@ -88,6 +144,34 @@ void broadcastMessage(int senderIndex, char *message)
       int clientSocket = clients[clientsInRoom[i]].socket;
       send(clientSocket, message, strlen(message), 0);
    }
+}
+
+void acceptNewClient()
+{
+   struct sockaddr_in clientAddress;
+   socklen_t addrlen = sizeof(clientAddress);
+   int newFileDescriptor = accept(listener, (struct sockaddr *)&clientAddress, &addrlen);
+
+   FD_SET(newFileDescriptor, &master);
+
+   if (newFileDescriptor > fdmax)
+   {
+      fdmax = newFileDescriptor;
+   }
+
+   int clientIndex = -1;
+   for (int j = 0; j < MAX_CLIENTS_PER_ROOM; j++)
+   {
+      if (clients[j].socket == 0)
+      {
+         clientIndex = j;
+         clients[j].socket = newFileDescriptor;
+         clients[j].roomIndex = -1;
+         break;
+      }
+   }
+
+   printf("Novo cliente conectado (socket %d)\n", newFileDescriptor);
 }
 
 int main(int argc, char *argv[])
@@ -131,32 +215,7 @@ int main(int argc, char *argv[])
          if (FD_ISSET(i, &read_fds))
          {
             if (i == listener)
-            {
-               struct sockaddr_in clientAddress;
-               socklen_t addrlen = sizeof(clientAddress);
-               int newFileDescriptor = accept(listener, (struct sockaddr *)&clientAddress, &addrlen);
-
-               FD_SET(newFileDescriptor, &master);
-
-               if (newFileDescriptor > fdmax)
-               {
-                  fdmax = newFileDescriptor;
-               }
-
-               int clientIndex = -1;
-               for (int j = 0; j < MAX_CLIENTS_PER_ROOM; j++)
-               {
-                  if (clients[j].socket == 0)
-                  {
-                     clientIndex = j;
-                     clients[j].socket = newFileDescriptor;
-                     clients[j].roomIndex = -1;
-                     break;
-                  }
-               }
-
-               printf("Novo cliente conectado (socket %d)\n", newFileDescriptor);
-            }
+               acceptNewClient();
             else
             {
                char buffer[256];
@@ -202,61 +261,14 @@ int main(int argc, char *argv[])
                   {
                      // O cliente não está em uma sala, processar comando de sala
                      printf("Cliente %d enviou comando %s\n", i, buffer);
-                     if (strncmp(buffer, "/help", 5) == 0) {
-                        printf("entrou");
-                        char helpMessage[] = "\n########### COMANDOS DE AJUDA ############\n"
-                                             "Comandos disponíveis:\n"
-                                             "/help - Exibe a lista de comandos disponíveis\n"
-                                             "/join <sala> - Entra na sala especificada\n"
-                                             "/create <nome> - Cria uma nova sala com o nome especificado\n"
-                                             "/list - Lista as salas disponíveis\n"
-                                             "/exit - Sai do chat\n"
-                                             "##########################################\n\n";
-                        send(i, helpMessage, sizeof(helpMessage), 0);
-                     }
+                     if (strncmp(buffer, "/help", 5) == 0)
+                        showHelpMessageCommand(i);
                      else if (strncmp(buffer, "/create ", 8) == 0)
-                     {
-                        strncpy(roomName, buffer + 8, sizeof(roomName) - 1);
-                        roomName[sizeof(roomName) - 1] = '\0';
-
-                        int roomIndex = -1;
-                        for (int i = 0; i < MAX_ROOMS; i++)
-                        {
-                           if (strlen(rooms[i].name) == 0)
-                           {
-                              roomIndex = i;
-                              strcpy(rooms[i].name, roomName);
-                              rooms[i].numClients = 0;
-                              break;
-                           }
-                        }
-                        if (roomIndex != -1)
-                        {
-                           // joinRoom(clientIndex, roomIndex);
-                           printf("Cliente %d criou a sala %s\n", i, roomName);
-                        }
-                        else
-                        {
-                           send(i, "Não é possível criar a sala. Limite máximo de salas atingido.\n", 61, 0);
-                        }
-                     }
+                        createNewRoomCommand(buffer, i);
                      else if (strncmp(buffer, "/join ", 6) == 0)
-                     {
-                        printf("Entrou na sala criada %s\n", buffer);
-                        int roomIndex = atoi(buffer + 6);
-                        if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
-                        {
-                           joinRoom(clientIndex, roomIndex);
-                           printf("Cliente %d entrou na sala %sd\n", i, roomName);
-                        }
-                        else
-                        {
-                           send(i, "Sala inválida\n", 16, 0);
-                        }
-                     }
-                     else if (strncmp(buffer, "/list", 5) == 0) {
+                        joinRoomCommand(buffer, i, clientIndex);
+                     else if (strncmp(buffer, "/list", 5) == 0)
                         listRooms(i);
-                     }
                      else
                      {
                         send(i, "Comando inválido\n", 19, 0);
