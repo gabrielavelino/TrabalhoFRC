@@ -115,6 +115,7 @@ void joinRoomCommand(char buffer[256], int client_file_decriptor, int clientInde
    if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
    {
       joinRoom(clientIndex, roomIndex);
+      send(client_file_decriptor, "Voce entrou na sala.\n", 22, 0);
       //printf("Cliente %d entrou na sala %s\n", client_file_decriptor, roomName);
    }
    else
@@ -182,6 +183,7 @@ void broadcastMessage(int senderIndex, char *message)
    {
       if(strncmp(message, "/exit", 5) == 0){
          leaveRoom(senderIndex);
+         send(clients[senderIndex].socket, "Voce retornou ao saguão\n", 26, 0);
          break;
       }
       int clientSocket = clients[clientsInRoom[i]].socket;
