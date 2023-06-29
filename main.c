@@ -28,6 +28,7 @@ fd_set master, read_fds;
 int fdmax, listener;
 ChatRoom rooms[MAX_ROOMS];
 Client clients[MAX_CLIENTS_PER_ROOM];
+char roomName[50];
 
 void initializeRooms()
 {
@@ -87,8 +88,10 @@ int main(int argc, char *argv[])
       printf("Digite IP e Porta para este servidor\n");
       exit(1);
    }
-   printf("###### Servidor de Chat ######\n");
-   printf("IP: %s\n", argv[1]);
+   printf("########### SERVIDOR CHAT FRC ############\n");
+   printf("Servidor rodando no IP: %s\n", argv[1]);
+   printf("Digite /help para ver os comandos disponíveis\n");
+   printf("##########################################\n");
    initializeRooms();
 
    FD_ZERO(&master);
@@ -171,6 +174,7 @@ int main(int argc, char *argv[])
                   close(i);
                   FD_CLR(i, &master);
                }
+               // REALIZA OS COMANDOS DO SERVIDOR
                else
                {
                   buffer[nbytes] = '\0';
@@ -188,10 +192,21 @@ int main(int argc, char *argv[])
                   if (clients[clientIndex].roomIndex == -1)
                   {
                      // O cliente não está em uma sala, processar comando de sala
-                     printf("Cliente %d enviou comando '%s'\n", i, buffer);
-                     if (strncmp(buffer, "/create ", 8) == 0)
+                     printf("Cliente %d enviou comando %s\n", i, buffer);
+                     if (strncmp(buffer, "/help", 5) == 0) {
+                        printf("entrou");
+                        char helpMessage[] = "\n########### COMANDOS DE AJUDA ############\n"
+                                             "Comandos disponíveis:\n"
+                                             "/help - Exibe a lista de comandos disponíveis\n"
+                                             "/join <sala> - Entra na sala especificada\n"
+                                             "/create <nome> - Cria uma nova sala com o nome especificado\n"
+                                             "/list - Lista as salas disponíveis\n"
+                                             "/exit - Sai do chat\n"
+                                             "##########################################\n\n";
+                        send(i, helpMessage, sizeof(helpMessage), 0);
+                     }
+                     else if (strncmp(buffer, "/create ", 8) == 0)
                      {
-                        char roomName[50];
                         strncpy(roomName, buffer + 8, sizeof(roomName) - 1);
                         roomName[sizeof(roomName) - 1] = '\0';
 
@@ -208,30 +223,31 @@ int main(int argc, char *argv[])
                         }
                         if (roomIndex != -1)
                         {
-                           joinRoom(clientIndex, roomIndex);
-                           printf("Cliente %d criou a sala '%s'\n", i, roomName);
+                           // joinRoom(clientIndex, roomIndex);
+                           printf("Cliente %d criou a sala %s\n", i, roomName);
                         }
                         else
                         {
                            send(i, "Não é possível criar a sala. Limite máximo de salas atingido.\n", 61, 0);
                         }
                      }
-                     if (strncmp(buffer, "/join ", 6) == 0)
+                     else if (strncmp(buffer, "/join ", 6) == 0)
                      {
+                        printf("Entrou na sala criada %s\n", buffer);
                         int roomIndex = atoi(buffer + 6);
                         if (roomIndex >= 0 && roomIndex < MAX_ROOMS && strlen(rooms[roomIndex].name) > 0)
                         {
                            joinRoom(clientIndex, roomIndex);
-                           printf("Cliente %d entrou na sala %d\n", i, roomIndex);
+                           printf("Cliente %d entrou na sala %sd\n", i, roomName);
                         }
                         else
                         {
-                           send(i, "Sala inválida\n", 14, 0);
+                           send(i, "Sala inválida\n", 16, 0);
                         }
                      }
                      else
                      {
-                        send(i, "Comando inválido\n", 17, 0);
+                        send(i, "Comando inválido\n", 19, 0);
                      }
                   }
                   else
