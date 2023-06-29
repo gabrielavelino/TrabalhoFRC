@@ -143,6 +143,8 @@ void broadcastMessage(int senderIndex, char *message)
    int roomIndex = clients[senderIndex].roomIndex;
    int *clientsInRoom = rooms[roomIndex].clients;
    int numClients = rooms[roomIndex].numClients;
+   char senderName[256];
+   sprintf(senderName, "%d: %s", senderIndex, message);
 
    for (int i = 0; i < numClients; i++)
    {
@@ -151,7 +153,9 @@ void broadcastMessage(int senderIndex, char *message)
          break;
       }
       int clientSocket = clients[clientsInRoom[i]].socket;
-      send(clientSocket, message, strlen(message), 0);
+      if(senderIndex != clientsInRoom[i]){
+         send(clientSocket, senderName, strlen(senderName), 0);
+      }
    }
 }
 
