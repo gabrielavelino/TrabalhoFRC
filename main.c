@@ -24,6 +24,7 @@ typedef struct
 {
    int socket;
    int roomIndex;
+   char name[50];
 } Client;
 
 fd_set master, read_fds;
@@ -38,6 +39,13 @@ void initializeRooms()
       strcpy(rooms[i].name, "");
       rooms[i].numClients = 0;
    }
+}
+void setNameCommand(char buffer[256], int client_file_decriptor, int clientIndex){
+   char name[50];
+   strncpy(name, buffer + 5, sizeof(name) - 1);
+   name[sizeof(name) - 1] = '\0';
+   strcpy(clients[clientIndex].name, name);
+   printf("Nome do cliente %d: %s\n", clientIndex, clients[clientIndex].name);
 }
 void createNewRoomCommand(char buffer[256], int client_file_decriptor)
 {
@@ -162,7 +170,13 @@ void broadcastMessage(int senderIndex, char *message)
    int *clientsInRoom = rooms[roomIndex].clients;
    int numClients = rooms[roomIndex].numClients;
    char senderName[256];
-   sprintf(senderName, "%d: %s", senderIndex, message);
+   
+   size_t nameLength = strlen(clients[senderIndex].name);
+   char clientName[50];
+   strcpy(clientName, clients[senderIndex].name);
+   clientName[nameLength - 1] = 0;
+
+   sprintf(senderName, "%s: %s", clients[senderIndex].name, message);
 
    for (int i = 0; i < numClients; i++)
    {
@@ -201,8 +215,9 @@ void acceptNewClient()
          break;
       }
    }
-
+   send(clients[clientIndex].socket, "Digite seu nome seguindo o formato: /name <seu nome>\n", 54, 0);
    printf("Novo cliente conectado (socket %d) \n", clientIndex);
+
 }
 
 int main(int argc, char *argv[])
@@ -294,7 +309,9 @@ int main(int argc, char *argv[])
                   {
                      // O cliente não está em uma sala, processar comando de sala
                      printf("Cliente %d enviou comando %s\n", i, buffer);
-                     if (strncmp(buffer, "/help", 5) == 0)
+                     if (strncmp(buffer, "/name ", 6) == 0)
+                        setNameCommand(buffer, i, clientIndex);
+                     else if (strncmp(buffer, "/help", 5) == 0)
                         showHelpMessageCommand(i);
                      else if (strncmp(buffer, "/create ", 8) == 0)
                         createNewRoomCommand(buffer, i);
