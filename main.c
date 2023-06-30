@@ -59,7 +59,7 @@ void setNameCommand(char buffer[256], int client_file_decriptor, int clientIndex
    printf("Nome do cliente %d: %s\n", clientIndex, clients[clientIndex].name);
 
    char nameMessage[100];
-   sprintf(nameMessage, "Bem vindo %s!\n", removeSpaces(name));
+   sprintf(nameMessage, "Bem vindo %s! Para ver a lista de comandos digite '/help'.\n", removeSpaces(name));
    send(client_file_decriptor, nameMessage, strlen(nameMessage), 0);
 }
 void createNewRoomCommand(char buffer[256], int client_file_decriptor)
@@ -241,6 +241,7 @@ int main(int argc, char *argv[])
    FD_ZERO(&master);
    FD_ZERO(&read_fds);
 
+   //CRIA E ESCUTA SOCKET
    listener = socket(AF_INET, SOCK_STREAM, 0);
    setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
