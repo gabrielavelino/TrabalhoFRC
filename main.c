@@ -40,12 +40,27 @@ void initializeRooms()
       rooms[i].numClients = 0;
    }
 }
+
+char *removeSpaces(char str[50])
+{
+   size_t nameLength = strlen(str);
+   char *Name = malloc(50 * sizeof(char));
+   strcpy(Name, str);
+   Name[nameLength - 2] = 0;
+
+   return Name;
+}
+
 void setNameCommand(char buffer[256], int client_file_decriptor, int clientIndex){
    char name[50];
    strncpy(name, buffer + 6, sizeof(name) - 1);
    name[sizeof(name) - 1] = '\0';
    strcpy(clients[clientIndex].name, name);
    printf("Nome do cliente %d: %s\n", clientIndex, clients[clientIndex].name);
+
+   char nameMessage[100];
+   sprintf(nameMessage, "Bem vindo %s!\n", removeSpaces(name));
+   send(client_file_decriptor, nameMessage, strlen(nameMessage), 0);
 }
 void createNewRoomCommand(char buffer[256], int client_file_decriptor)
 {
@@ -149,14 +164,8 @@ void listRooms(int client_file_descriptor)
 {
    for (size_t i = 0; i < MAX_ROOMS; i++)
    {
-      size_t nameLength = strlen(rooms[i].name);
-      printf("%s\n", rooms[i].name);
-      char roomName[50];
-      strcpy(roomName, rooms[i].name);
-      roomName[nameLength - 2] = 0; // menos 2 caracteres no final
-
       char roomList[256];
-      sprintf(roomList, "%s - %d/%d\n", roomName, rooms[i].numClients, MAX_CLIENTS_PER_ROOM);
+      sprintf(roomList, "%s - %d/%d\n", removeSpaces(rooms[i].name), rooms[i].numClients, MAX_CLIENTS_PER_ROOM);
       if(strcmp(rooms[i].name, "") == 0){
          break;
       }
@@ -171,12 +180,7 @@ void broadcastMessage(int senderIndex, char *message)
    int numClients = rooms[roomIndex].numClients;
    char senderName[256];
    
-   size_t nameLength = strlen(clients[senderIndex].name);
-   char clientName[50];
-   strcpy(clientName, clients[senderIndex].name);
-   clientName[nameLength - 2] = 0;
-
-   sprintf(senderName, "%s: %s", clientName, message);
+   sprintf(senderName, "%s: %s", removeSpaces(clients[senderIndex].name), message);
 
    for (int i = 0; i < numClients; i++)
    {
